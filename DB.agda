@@ -23,31 +23,26 @@ import Data.Nat.Show as NS
 -- suppports. These types are mapped into the corresponding SQL types
 -- to perform queries and are converted into the appropriate Agda types
 -- when query results are returned.
-data U : Set where
-  CHAR : U
-  NAT  : U
-  BOOL : U
-  STR  : ℕ → U
 
--- The name of a type as it corresponds to its given SQL name.
-typeName : U → String
+data AtrType : Set where
+  CHAR : AtrType
+  NAT  : AtrType
+  BOOL : AtrType
+  STR  : ℕ → AtrType
+
+typeName : AtrType → String
 typeName CHAR     = "CHAR"
 typeName NAT      = "INTEGER"
 typeName BOOL     = "Boolean"
 typeName (STR x)  = "CHAR(" ++ NS.show x ++ ")"
 
--- Map the universe of SQL types to agda
--- equivalents.
--- Strings are a little odd in SQL in that they are
--- paramterized by a length, but the length serves only
--- as an upper bound on the number of characters present.
--- This behaviour is mimicked by the BoundedVec type, but we
--- should also add an unbounded string type for convenience as well.
-el : U → Set
+el : AtrType → Set
 el CHAR     = Char
 el NAT      = ℕ
 el BOOL     = Bool
 el (STR x)  = BoundedVec Char x
+
+
 
 So : Bool → Set
 So true  = Unit
@@ -56,7 +51,7 @@ So false = ⊥
 -- An attribute corresponds to a column in the database.
 -- It is a column name along with the SQL type.
 Attribute : Set
-Attribute = Σ String (λ _ → U)
+Attribute = Σ String (λ _ → AtrType)
 
 Schema : Set
 Schema = List Attribute
@@ -66,7 +61,7 @@ Schema = List Attribute
 -- database schema.
 data Row : Schema → Set where
   EmptyRow : Row []
-  ConsRow  : ∀ {s name} → {u : U} → el u → Row s → Row (( name , u ) ∷ s)
+  ConsRow  : ∀ {s name} → {u : AtrType} → el u → Row s → Row (( name , u ) ∷ s)
 
   -- Convert a row to a list of element wise string representations.
   -- This makes for a convenient way to display the rows.
