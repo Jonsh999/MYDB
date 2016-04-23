@@ -101,8 +101,7 @@ rowToList {( n , STR x ) ∷ s} (ConsRow x₁ xs)   = ("\"" ++ fromList (toList 
 
 data Constraint : ( s : Schema ) → Set where
   EmptyConstraint : Constraint []
-  Unique : ∀ { s : Schema }  → ( n : ℕ ) → n ≤ ( length s )  → Constraint s -- ( n ≤? ( length s ) )
-  -- Foreign : ∀{ s } → ( n : ℕ ) → n < length s → Constraint s n( n ≤? ( length s ) )
+  Unique : ∀ { s : Schema }  → ( n : ℕ ) → n ≤ ( length s )  → Constraint s
 
 lop : { t : Set } → Dec t → Bool → Set
 lop ( yes _ ) true = ⊤
@@ -119,13 +118,12 @@ UniqElem _ [] _ _ = ⊤
 UniqElem [] _ _ _ = ⊤
 UniqElem s ( nr ∷ l ) r n = Σ ( eqn ( rowToList nr ) ( rowToList r ) n zero ) ( λ z → UniqElem s l r n)
 
-
 f : ( s : Schema ) → ( c : Constraint s ) → ( lr : List ( Row s) ) → Set
 f [] EmptyConstraint _ = ⊤
 f s ( Unique  nn _ ) [] = ⊤
 f s ( Unique  nn yy ) ( r ∷ lr )  =  Σ ( UniqElem s lr r nn )  (λ z → f s ( Unique nn yy ) lr )
--- f _ ( Foreign a nn ) [] = ⊤
--- f s ( Foreign a nn )
+
+
 data Table : ( s : Schema ) → ( c : Constraint s ) → ( lr : List ( Row s ) ) → Set where
   EmptyTable : Table [] EmptyConstraint []
   CTable : ∀ s  → ∀  (c : Constraint s ) → ∀ ( lr : List ( Row s ) ) → ( f s c lr ) → Table s c lr
