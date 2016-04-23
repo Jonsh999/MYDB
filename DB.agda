@@ -104,8 +104,8 @@ data Constraint : ( s : Schema ) → Set where
   Unique : ∀ { s : Schema }  → ( n : ℕ ) → n ≤ ( length s )  → Constraint s
 
 lop : { t : Set } → Dec t → Bool → Set
-lop ( yes _ ) true = ⊤
-lop ( yes _ ) false = ⊥
+lop ( yes _ ) false = ⊤
+lop ( yes _ ) true = ⊥
 lop ( no _ ) _ = ⊤
 
 eqn : ( a : List String ) → ( b : List String ) → ( n : ℕ ) → ( step : ℕ ) → Set -- беск цикл
