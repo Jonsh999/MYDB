@@ -15,6 +15,7 @@ open import Relation.Binary.Core using (_≡_)
 open import Data.List.All hiding (lookup)
 open import Data.List.Any
 open import Relation.Nullary
+open import Data.BoundedVec hiding (toList ; fromList) renaming ([] to ⟨⟩ ; _∷_ to _::_)
 
 import Data.Nat.Show as NS
 
@@ -131,6 +132,57 @@ data Table : ( s : Schema ) → ( c : Constraint s ) → ( lr : List ( Row s ) )
 Insert : { s : Schema } → { c : Constraint s } → { lr : List ( Row s ) } → ( t : Table s c lr )
                                           → ( r : Row s ) → ( ff : f s c ( r ∷ lr ) ) → Table s c ( r ∷ lr )
 Insert {s} {c} {lr} t r ff = CTable s c ( r ∷ lr ) ff
+
+
+
+
+DissertationCounsil : Schema
+DissertationCounsil  = ("id", NAT)
+                    ∷  ("number", STR 255)
+                    ∷  ("name", STR 255)
+                    ∷  ("organization_str", STR 255)
+                    ∷  ("phone", STR 100)
+                    ∷  ("place", STR 1000)
+                    ∷  ("approved", BOOL) ∷ []
+
+
+
+
+-- ConstraintNumber : Constraint DissertationCounsil
+-- ConstraintNumber = Unique 2 _
+
+-- ConstraintNumber1 : Constraint DissertationCounsil
+-- ConstraintNumber1 = Unique 1 _
+
+mkBounded : {A : Set} {n : ℕ} → (l : List A) → BoundedVec A (length l + n)
+mkBounded []       = ⟨⟩
+mkBounded (x ∷ xs) = x :: mkBounded xs
+
+-- FR : Row DissertationCounsil
+-- FR = ConsRow (1) (ConsRow (mkBounded (toList "122345")) (ConsRow (mkBounded (toList "МГУ")) (ConsRow (mkBounded (toList "МГУ")) (ConsRow (mkBounded (toList "89123456243")) (ConsRow mkBounded(toList "МГУ") (ConsRow "1" EmptyRow))))))
+
+
+
+
+
+DissertationCounsil2 : Schema
+DissertationCounsil2  = ("id", NAT)
+                    ∷  ("number", STR 255) ∷ []
+
+FR : Row DissertationCounsil2
+FR = ConsRow (1) (ConsRow ("122345") EmptyRow )
+
+
+
+
+
+
+
+
+
+
+
+
 
 -- nel : {s : Schema} → ( n : ℕ ) → ( step : ℕ ) → ( ls : List (String)  ) → ( n == step ) → Set
 -- nel _ _ [] _ = ⊥
