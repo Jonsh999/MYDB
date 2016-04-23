@@ -128,7 +128,8 @@ data Table : ( s : Schema ) → ( c : Constraint s ) → ( lr : List ( Row s ) )
   EmptyTable : Table [] EmptyConstraint []
   CTable : ∀ s  → ∀  (c : Constraint s ) → ∀ ( lr : List ( Row s ) ) → ( f s c lr ) → Table s c lr
 
-Insert : { s : Schema } → { c : Constraint s } → { lr : List ( Row s ) } → ( t : Table s c lr ) → ( r : Row s ) → ( ff : f s c ( r ∷ lr ) ) → Table s c ( r ∷ lr )
+Insert : { s : Schema } → { c : Constraint s } → { lr : List ( Row s ) } → ( t : Table s c lr )
+                                          → ( r : Row s ) → ( ff : f s c ( r ∷ lr ) ) → Table s c ( r ∷ lr )
 Insert {s} {c} {lr} t r ff = CTable s c ( r ∷ lr ) ff
 
 -- nel : {s : Schema} → ( n : ℕ ) → ( step : ℕ ) → ( ls : List (String)  ) → ( n == step ) → Set
