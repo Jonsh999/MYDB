@@ -67,12 +67,12 @@ Schema = List Attribute
 
 -- A row from the database is a list with knowlege of the
 -- database schema.
+
+
 data Row : Schema → Set where
   EmptyRow : Row []
   ConsRow  : ∀ {s name} → {u : AtrType} → el u → Row s → Row (( name , u ) ∷ s)
 
-  -- Convert a row to a list of element wise string representations.
-  -- This makes for a convenient way to display the rows.
 rowToList : {s : Schema} → Row s → List String
 rowToList {[]} EmptyRow                         = []
 rowToList {( n , CHAR ) ∷ s} (ConsRow x xs)     = ("'" ++ fromList [ x ] ++ "'") ∷ rowToList xs
