@@ -19,31 +19,18 @@ open import Data.BoundedVec hiding (toList ; fromList) renaming ([] to ⟨⟩ ; 
 
 import Data.Nat.Show as NS
 
--- Our mini universe of types
--- This is a representation of the types that our database bindings
--- suppports. These types are mapped into the corresponding SQL types
--- to perform queries and are converted into the appropriate Agda types
--- when query results are returned.
 data AtrType : Set where
   CHAR : AtrType
   NAT  : AtrType
   BOOL : AtrType
   STR  : ℕ → AtrType
 
--- The name of a type as it corresponds to its given SQL name.
 typeName : AtrType → String
 typeName CHAR     = "CHAR"
 typeName NAT      = "INTEGER"
 typeName BOOL     = "Boolean"
 typeName (STR x)  = "CHAR(" ++ NS.show x ++ ")"
 
--- Map the universe of SQL types to agda
--- equivalents.
--- Strings are a little odd in SQL in that they are
--- paramterized by a length, but the length serves only
--- as an upper bound on the number of characters present.
--- This behaviour is mimicked by the BoundedVec type, but we
--- should also add an unbounded string type for convenience as well.
 el : AtrType → Set
 el CHAR     = Char
 el NAT      = ℕ
@@ -51,13 +38,17 @@ el BOOL     = Bool
 el (STR x)  = BoundedVec Char x
 
 So : Bool → Set
-So true  = Unit
+So true  = ⊤
 So false = ⊥
 
--- An attribute corresponds to a column in the database.
--- It is a column name along with the SQL type.
+Lo : { t : Set } → Dec t → Set
+Lo ( yes _ ) = ⊤
+Lo ( no _ ) = ⊥
 
-
+KK : { t : Set } → Dec t → Bool → Set
+KK ( yes _ ) true = ⊤
+KK ( yes _ ) false = ⊥
+KK ( no _ ) _ = ⊥
 
 Attribute : Set
 Attribute = Σ String (λ _ → AtrType)
@@ -65,43 +56,22 @@ Attribute = Σ String (λ _ → AtrType)
 Schema : Set
 Schema = List Attribute
 
-
--- A row from the database is a list with knowlege of the
--- database schema.
-
-
-data Row : Schema → Set where
-  EmptyRow : Row []
-  ConsRow  : ∀ {s name} → {u : AtrType} → el u → Row s → Row (( name , u ) ∷ s)
-
-rowToList : {s : Schema} → Row s → List String
-rowToList {[]} EmptyRow                         = []
-rowToList {( n , CHAR ) ∷ s} (ConsRow x xs)     = ("'" ++ fromList [ x ] ++ "'") ∷ rowToList xs
-rowToList {( n , NAT ) ∷ s} (ConsRow x xs)      = NS.show x ∷ rowToList xs
-rowToList {( n , BOOL ) ∷ s} (ConsRow true xs)  = "1" ∷ rowToList xs
-rowToList {( n , BOOL ) ∷ s} (ConsRow false xs) = "0" ∷ rowToList xs
-rowToList {( n , STR x ) ∷ s} (ConsRow x₁ xs)   = ("\"" ++ fromList (toList x₁) ++ "\"") ∷ rowToList xs
+Elem : Set
+Elem = Σ String (λ _ → AtrType)
 
 
+fl : Schema → List Elem → Set
+fl [] _ = ⊤
+fl _ [] = ⊤
+fl ( ( a , b ) ∷ s ) ( ( c , d ) ∷ le ) = Σ ( KK ( length s ≟ length le ) ( typeName b == typeName d ) )  ( λ z → fl s le )
 
-  -- Unique : ∀{ s } → (a : Attribute) → All (λ y → a ≡ y ) s → Constraint s
-  -- Unique : ∀{ s } → (a : Attribute) → ( t : Any (_≡_ a) s ) → Constraint s
-
-
--- gg : { a : ℕ } → { b : ℕ } → Dec ( a ≡ b ) → Bool
--- gg ( yes _ ) = true
--- gg ( no _ ) = false
-
-
--- constraint_el : Schema -> Row Schema -> List (Row Schema) -> Set
-
-
--- cmp : ( n : ℕ ) → ( t : ℕ ) → n ≤? t → Set
--- cmp _ _ yes _ = ⊤
--- cmp _ _ no _ = ⊥
+data Row : Schema → List Elem → Set where
+  EmptyRow : Row [] []
+  CRow     : ( s : Schema ) → ( le : List Elem ) → ( fff : fl s le  ) → Row s le
 
 data Constraint : ( s : Schema ) → Set where
   EmptyConstraint : Constraint []
+  NonConstraint : ∀ { s : Schema } → Constraint s
   Unique : ∀ { s : Schema }  → ( n : ℕ ) → n ≤ ( length s )  → Constraint s
 
 lop : { t : Set } → Dec t → Bool → Set
@@ -109,35 +79,31 @@ lop ( yes _ ) false = ⊤
 lop ( yes _ ) true = ⊥
 lop ( no _ ) _ = ⊤
 
-eqn : ( a : List String ) → ( b : List String ) → ( n : ℕ ) → ( step : ℕ ) → Set -- беск цикл
+eqn : ( a : List Elem ) → ( b : List Elem ) → ( n : ℕ ) → ( step : ℕ ) → Set -- беск цикл
 eqn [] _ _ _ = ⊤
 eqn _ [] _ _ = ⊤
-eqn ( a ∷ la ) ( b ∷ lb ) n  step = Σ (  lop ( n ≟ step ) (a == b) ) ( λ z → eqn la lb n ( step + 1 ) )
+eqn ( ( a , b ) ∷ la ) ( ( c , d ) ∷ lb ) n  step = Σ (  lop ( n ≟ step ) (a == c) ) ( λ z → eqn la lb n ( step + 1 ) )
 
-UniqElem : (s : Schema ) → ( l : List ( Row s ) ) → ( r : Row s ) → ( n : ℕ ) → Set
+UniqElem : { le : List Elem } → { le2 : List Elem } → (s : Schema ) → ( l : List ( Row s le ) ) → ( r : Row s le2 ) → ( n : ℕ ) → Set
 UniqElem _ [] _ _ = ⊤
 UniqElem [] _ _ _ = ⊤
-UniqElem s ( nr ∷ l ) r n = Σ ( eqn ( rowToList nr ) ( rowToList r ) n zero ) ( λ z → UniqElem s l r n)
+UniqElem {le} {le2} s ( nr ∷ l ) r n = Σ ( eqn le le2 n zero ) ( λ z → UniqElem s l r n)
 
-f : ( s : Schema ) → ( c : Constraint s ) → ( lr : List ( Row s) ) → Set
+f : { le : List Elem} → ( s : Schema ) → ( c : Constraint s ) → ( lr : List ( Row s le ) ) → Set
 f [] EmptyConstraint _ = ⊤
+f _ ( NonConstraint ) _ = ⊤
 f s ( Unique  nn _ ) [] = ⊤
 f s ( Unique  nn yy ) ( r ∷ lr )  =  Σ ( UniqElem s lr r nn )  (λ z → f s ( Unique nn yy ) lr )
 
+data Table : { le : List Elem } → ( s : Schema ) → ( c : Constraint s ) → ( lr : List ( Row s le ) ) → Set where
+  EmptyTable : Table {[]} [] EmptyConstraint []
+  CTable : { le : List Elem } → ∀ s  → ∀  (c : Constraint s ) → ∀ ( lr : List ( Row s le ) ) → ( f s c lr ) → Table s c lr
 
-data Table : ( s : Schema ) → ( c : Constraint s ) → ( lr : List ( Row s ) ) → Set where
-  EmptyTable : Table [] EmptyConstraint []
-  CTable : ∀ s  → ∀  (c : Constraint s ) → ∀ ( lr : List ( Row s ) ) → ( f s c lr ) → Table s c lr
-
-Insert : { s : Schema } → { c : Constraint s } → { lr : List ( Row s ) } → ( t : Table s c lr )
-                                          → ( r : Row s ) → ( ff : f s c ( r ∷ lr ) ) → Table s c ( r ∷ lr )
-Insert {s} {c} {lr} t r ff = CTable s c ( r ∷ lr ) ff
-
-
-
+Insert : { s : Schema } → { c : Constraint s } → { le : List Elem } → { le2 : List Elem } → { lr : List ( Row s le ) } → ( t : Table s c lr ) → ( r : Row s le ) → ( ff : f s c ( r ∷ lr ) ) → Table s c ( r ∷ lr )
+Insert {s} {c} {le} {le2} {lr} t r ff = CTable s c ( r ∷ lr ) ff
 
 DissertationCounsil : Schema
-DissertationCounsil  = ("id", NAT)
+DissertationCounsil =  ("id", NAT)
                     ∷  ("number", STR 255)
                     ∷  ("name", STR 255)
                     ∷  ("organization_str", STR 255)
@@ -145,42 +111,37 @@ DissertationCounsil  = ("id", NAT)
                     ∷  ("place", STR 1000)
                     ∷  ("approved", BOOL) ∷ []
 
+_≠0 : ℕ → Set
+0 ≠0 = ⊥
+_ ≠0 = ⊤
 
 
+nzplus : ( n : ℕ ) → {nz : n ≠0} → ℕ → ℕ
+nzplus zero {()} m
+nzplus (suc n) m = n + m
+-- testnzplus = nzplus 1 3
+testnzplus = nzplus 0 3
 
--- ConstraintNumber : Constraint DissertationCounsil
--- ConstraintNumber = Unique 2 _
+-- DC2 : Schema
+-- DC2 = ("id", NAT) ∷ ("number", STR 255) ∷ []
 
--- ConstraintNumber1 : Constraint DissertationCounsil
--- ConstraintNumber1 = Unique 1 _
+-- LE : List Elem
+-- LE = ( "12" , NAT) ∷ ("dwqd" , STR 255) ∷ []
 
-mkBounded : {A : Set} {n : ℕ} → (l : List A) → BoundedVec A (length l + n)
-mkBounded []       = ⟨⟩
-mkBounded (x ∷ xs) = x :: mkBounded xs
+-- TestTable : Table DC EmptyConstraint []
+-- TestTable = CTable DC EmptyConstraint [] ( f DC EmptyConstraint [] )
 
--- FR : Row DissertationCounsil
--- FR = ConsRow (1) (ConsRow (mkBounded (toList "122345")) (ConsRow (mkBounded (toList "МГУ")) (ConsRow (mkBounded (toList "МГУ")) (ConsRow (mkBounded (toList "89123456243")) (ConsRow mkBounded(toList "МГУ") (ConsRow "1" EmptyRow))))))
+-- s : Schema
+-- s = []
 
+-- le : List Elem
+-- le = []
 
+-- ff : Set
+-- ff = fl DC2 LE
 
-
-
-DissertationCounsil2 : Schema
-DissertationCounsil2  = ("id", NAT)
-                    ∷  ("number", STR 255) ∷ []
-
-FR : Row DissertationCounsil2
-FR = ConsRow (1) (ConsRow ("122345") EmptyRow )
-
-
-
-
-
-
-
-
-
-
+-- FR : Row DC2 LE
+-- FR = CRow DC2 LE ( ff )
 
 
 
@@ -199,39 +160,3 @@ FR = ConsRow (1) (ConsRow ("122345") EmptyRow )
 -- Get : { s : Schema } → {c : Constrain s } → { lr : List (Row s) } → (t : Table s c lr ) → ( n : ℕ ) → ( str : String ) → ( f s c lr ) → Set
 -- Get {s} { EmpetyConstraint _} { lr } _ _ _ _ = ⊥
 -- Get {s} { Unique nn _ } {lr} t n str = checker n nn lr str _
-
-
--- f : ( s : Schema ) → ( c : Constraint ) → ( r : Row ) → ( t : Table ) → ( tr : Table )
---   ( Unique _ _ _) r [] EmptyTable → EmptyTable
---   ( _ ) r t → ∑ All ( λ y → rowToList s r ≡ y )
-
-
--- неравенство и атрибут вместо строки
-  -- st (Row Schema) -> Set
-  -- data Constraint : ( s : Schema) → ( x : Attribute ) → All (λ y → x ≡ y ) s → Set where
-  --  Unique : ∀ s → ∀ x → ∀ a → Constraint s x a
-
--- data Table : ( s : Schema ) → ( c : Constraint s  ) → ( l : List (Row) ) → Set where
---   EmptyTable : Table []
-
--- insert : {a : Table} -> Row s -> {b : Table}
--- insert _ EmpetyRow  = a
-
-
-
-
--- dd : (s : Schema) → (r : Row s ) → length s ≡ length (rowToList r)
--- dd s r = _-c
-
-
--- Show a row
-showRow : {s : Schema} → Row s → String
-showRow = foldr _++_ "" ∘ intersperse "|" ∘ rowToList
-
--- Table : Schema → Set
--- Table = List ∘ Row
-
--- The length of a row from the database. This is, perhaps, not that useful.
-∥_∥ : ∀ {s} → Row s → ℕ
-∥ EmptyRow ∥    = zero
-∥ ConsRow x y ∥ = suc ∥ y ∥
