@@ -63,7 +63,8 @@ Elem = Σ String (λ _ → AtrType)
 fl : Schema → List Elem → Set
 fl [] _ = ⊤
 fl _ [] = ⊤
-fl ( ( a , b ) ∷ s ) ( ( c , d ) ∷ le ) = Σ ( KK ( length s ≟ length le ) ( typeName b == typeName d ) )  ( λ z → fl s le )
+fl ( ( a , b ) ∷ s ) ( ( c , d ) ∷ le )
+              = Σ ( KK ( length s ≟ length le ) ( typeName b == typeName d ) )  ( λ z → fl s le )
 
 data Row : Schema → List Elem → Set where
   EmptyRow : Row [] []
