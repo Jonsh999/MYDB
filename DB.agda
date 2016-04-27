@@ -70,6 +70,8 @@ data Row : Schema → List Elem → Set where
   EmptyRow : Row [] []
   CRow     : ( s : Schema ) → ( le : List Elem ) → ( fff : fl s le  ) → Row s le
 
+
+
 data Constraint : ( s : Schema ) → Set where
   EmptyConstraint : Constraint []
   NonConstraint : ∀ { s : Schema } → Constraint s
@@ -100,7 +102,9 @@ data Table : { le : List Elem } → ( s : Schema ) → ( c : Constraint s ) → 
   EmptyTable : Table {[]} [] EmptyConstraint []
   CTable : { le : List Elem } → ∀ s  → ∀  (c : Constraint s ) → ∀ ( lr : List ( Row s le ) ) → ( f s c lr ) → Table s c lr
 
-Insert : { s : Schema } → { c : Constraint s } → { le : List Elem } → { le2 : List Elem } → { lr : List ( Row s le ) } → ( t : Table s c lr ) → ( r : Row s le ) → ( ff : f s c ( r ∷ lr ) ) → Table s c ( r ∷ lr )
+Insert : { s : Schema } → { c : Constraint s } → { le : List Elem } → { le2 : List Elem }
+                    → { lr : List ( Row s le ) } → ( t : Table s c lr )
+                    → ( r : Row s le ) → ( ff : f s c ( r ∷ lr ) ) → Table s c ( r ∷ lr )
 Insert {s} {c} {le} {le2} {lr} t r ff = CTable s c ( r ∷ lr ) ff
 
 
